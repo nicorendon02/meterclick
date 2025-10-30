@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LoRaWAN Power Meter dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #111821;
+      --card: #121b26;
+      --muted: #a6b3c2;
+      --text: #e8f0f7;
+      --accent: #58a6ff;
+      --good: #3fb950;
+      --warn: #f2cc60;
+      --bad: #f85149;
+      --shadow: 0 8px 24px rgba(0, 0, 0, .25);
+    }
+
+    [data-theme="light"] {
+      --bg: #f7fafc;
+      --panel: #ffffff;
+      --card: #ffffff;
+      --muted: #475569;
+      --text: #0b1220;
+      --accent: #2563eb;
+      --shadow: 0 8px 24px rgba(2, 6, 23, .08);
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font: 500 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 10% -10%, rgba(88, 166, 255, .08), transparent 40%), var(--bg);
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0)), var(--panel);
+      backdrop-filter: blur(8px);
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin-inline: auto;
+      padding: 16px;
+    }
+
+    @media(max-width:480px) {
+      .wrap {
+        padding: 12px;
+      }
+    }
+
+    h1 {
+      font-size: clamp(20px, 3.2vw, 30px);
+      margin: 0 0 8px;
+      letter-spacing: .2px;
+      text-align: center;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-weight: 520;
+      word-break: break-word;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    @media(max-width:480px) {
+      .sub {
+        font-size: 14px;
+      }
+    }
+
+    .device-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    @media(max-width:767px) {
+      .device-info {
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .info-item {
+        display: block;
+      }
+    }
+
+    @media(min-width:768px) {
+      .info-item:not(:last-child)::after {
+        content: ' · ';
+        margin: 0 4px;
+        color: var(--muted);
+      }
+    }
+
+    .bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 14px
+    }
+
+    @media(max-width:480px) {
+      .bar {
+        gap: 8px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+
+    .btn,
+    label.file {
+      cursor: pointer;
+      border: 1px solid rgba(148, 163, 184, .25);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, 0));
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      box-shadow: var(--shadow);
+      min-height: 44px;
+      justify-content: center;
+    }
+
+    .btn:hover,
+    label.file:hover {
+      border-color: rgba(88, 166, 255, .7)
+    }
+
+    .btn:active {
+      transform: translateY(1px)
+    }
+
+    .btn.small {
+      padding: 8px 12px;
+      font-size: 14px;
+      min-height: 36px;
+    }
+
+    .right {
+      margin-left: auto
+    }
+
+    @media(max-width:480px) {
+      .right {
+        margin-left: 0;
+        width: 100%;
+      }
+    }
+
+    input[type="file"] {
+      display: none
+    }
+
+    .in {
+      border: 1px solid rgba(148, 163, 184, .25);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, 0));
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 12px;
+      min-width: 220px;
+      box-shadow: var(--shadow)
+    }
+
+    @media(max-width:480px) {
+      .in {
+        min-width: unset;
+        width: 100%;
+      }
+    }
+
+    .in::placeholder {
+      color: var(--muted)
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      margin-top: 18px
+    }
+
+    @media(min-width:720px) {
+      .grid {
+        grid-template-columns: repeat(12, 1fr)
+      }
+    }
+
+    .card {
+      grid-column: span 12;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, .00)), var(--card);
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow)
+    }
+
+    @media(max-width:480px) {
+      .card {
+        padding: 12px;
+        border-radius: 12px;
+      }
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(1, 1fr);
+      gap: 12px
+    }
+
+    @media(min-width:480px) {
+      .cards {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(min-width:720px) {
+      .cards {
+        grid-template-columns: repeat(3, 1fr)
+      }
+    }
+
+    @media(min-width:1024px) {
+      .cards {
+        grid-template-columns: repeat(6, 1fr)
+      }
+    }
+
+    .stat {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, .00)), var(--card);
+      border: 1px solid rgba(148, 163, 184, .18);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between
+    }
+
+    @media(max-width:480px) {
+      .stat {
+        min-height: 80px;
+        padding: 10px;
+        border-radius: 12px;
+      }
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    @media(max-width:480px) {
+      .stat .label {
+        font-size: 12px;
+      }
+    }
+
+    .stat .value {
+      font-weight: 800;
+      font-size: clamp(16px, 4vw, 28px);
+      word-break: break-all;
+    }
+
+    .stat .trend {
+      height: 36px
+    }
+
+    @media(max-width:480px) {
+      .stat .trend {
+        height: 28px;
+      }
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px
+    }
+
+    @media(min-width:580px) {
+      .kpi-row {
+        grid-template-columns: repeat(4, 1fr)
+      }
+    }
+
+    canvas.spark {
+      width: 100%;
+      height: 36px;
+      touch-action: pan-x pan-y;
+    }
+
+    @media(max-width:480px) {
+      canvas.spark {
+        height: 28px;
+      }
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .pill {
+      border: 1px dashed rgba(148, 163, 184, .32);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+      word-break: break-word;
+    }
+
+    @media(max-width:480px) {
+      .pill {
+        font-size: 12px;
+        padding: 5px 8px;
+        text-align: center;
+      }
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .title-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    @media(max-width:480px) {
+      .title-row {
+        gap: 6px;
+      }
+    }
+
+    .title-row h2 {
+      margin: 0;
+      font-size: 18px
+    }
+
+    @media(max-width:480px) {
+      .title-row h2 {
+        font-size: 16px;
+      }
+    }
+
+    .flex {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .list {
+      width: 100%;
+      border-collapse: collapse;
+      overflow-x: auto;
+      display: block;
+      white-space: nowrap;
+    }
+
+    @media(min-width:768px) {
+      .list {
+        display: table;
+        white-space: normal;
+      }
+    }
+
+    .list thead,
+    .list tbody,
+    .list tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    @media(min-width:768px) {
+
+      .list thead,
+      .list tbody,
+      .list tr {
+        display: table-row;
+        width: auto;
+        table-layout: auto;
+      }
+    }
+
+    .list th,
+    .list td {
+      padding: 8px 4px;
+      border-bottom: 1px solid rgba(148, 163, 184, .18);
+      text-align: left;
+      font-size: 12px;
+      word-break: break-word;
+      display: table-cell;
+    }
+
+    @media(min-width:480px) {
+
+      .list th,
+      .list td {
+        padding: 10px;
+        font-size: 14px;
+      }
+    }
+
+    @media(max-width:767px) {
+      .list {
+        font-size: 11px;
+      }
+
+      .list th:nth-child(10),
+      .list td:nth-child(10) {
+        display: none;
+      }
+
+      .list th:nth-child(9),
+      .list td:nth-child(9) {
+        display: none;
+      }
+
+      .list th:nth-child(8),
+      .list td:nth-child(8) {
+        display: none;
+      }
+    }
+
+    .empty {
+      border: 1px dashed rgba(148, 163, 184, .25);
+      border-radius: 16px;
+      padding: 18px;
+      text-align: center;
+      color: var(--muted)
+    }
+
+    .dropzone {
+      border: 2px dashed rgba(88, 166, 255, .5);
+      border-radius: 16px;
+      padding: 16px;
+      text-align: center
+    }
+
+    footer {
+      color: var(--muted);
+      padding: 24px;
+      text-align: center;
+    }
+
+    @media(max-width:480px) {
+      footer {
+        padding: 16px;
+        font-size: 14px;
+      }
+    }
+
+    .ok {
+      color: var(--good)
+    }
+
+    .warn {
+      color: var(--warn)
+    }
+
+    .bad {
+      color: var(--bad)
+    }
+
+    /* Mobile-specific table styles */
+    @media(max-width:767px) {
+      .mobile-cards {
+        display: block;
+      }
+
+      .mobile-cards .list {
+        display: none;
+      }
+
+      .mobile-card {
+        background: var(--card);
+        border: 1px solid rgba(148, 163, 184, .18);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow);
+      }
+
+      .mobile-card .card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 6px;
+        font-size: 13px;
+        gap: 8px;
+      }
+
+      .mobile-card .card-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .mobile-card .card-label {
+        color: var(--muted);
+        font-weight: 500;
+        flex-shrink: 0;
+        min-width: 80px;
+      }
+
+      .mobile-card .card-value {
+        color: var(--text);
+        word-break: break-word;
+        text-align: right;
+        font-weight: 500;
+      }
+
+      .mobile-card .card-payload {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 10px;
+        word-break: break-all;
+      }
+    }
+
+    @media(min-width:768px) {
+      .mobile-cards {
+        display: none;
+      }
+    }
+
+    /* Touch-friendly improvements */
+    @media(pointer: coarse) {
+
+      .btn,
+      label.file {
+        min-height: 48px;
+        padding: 12px 16px;
+      }
+
+      .btn.small {
+        min-height: 40px;
+        padding: 10px 14px;
+      }
+    }
+
+    /* Hide theme text on very small screens */
+    @media(max-width:320px) {
+      .theme-text {
+        display: none;
+      }
+    }
+
+    /* Prevent horizontal scroll on small screens */
+    @media(max-width:480px) {
+      body {
+        overflow-x: hidden;
+      }
+
+      .wrap {
+        overflow-x: hidden;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Power Meter Click · LoRaWAN Dashboard</h1>
+      <div class="sub">
+        <div class="device-info">
+          <span class="info-item">Device: <span id="deviceName">—</span></span>
+          <span class="info-item">DevEUI: <span id="devEUI">—</span></span>
+          <span class="info-item">Last update: <span id="lastUpdate">—</span></span>
+          <span class="info-item">Last fetch: <span id="lastFetch">—</span></span>
+        </div>
+      </div>
+      <div class="bar">
+        <span id="autoPill" class="pill"><i class="fa-solid fa-arrows-rotate"></i> Auto refresh: 5s</span>
+        <span class="pill"><i class="fa-solid fa-file-code"></i> Source: data.json</span>
+        <div class="right"></div>
+        <button id="btnTheme" class="btn small" title="Toggle theme"><i class="fa-solid fa-circle-half-stroke"></i><span
+            class="theme-text"> Theme</span></button>
+
+      </div>
+  </header>
+
+  <main class="wrap">
+    <section class="grid">
+      <div class="card" style>
+        <div class="title-row">
+          <h2>Live KPIs</h2><span id="status" class="pill">No data yet</span>
+        </div>
+        <div class="cards">
+          <div class="stat">
+            <div class="label">Voltage</div>
+            <div class="value" id="vV">—</div><canvas class="spark" id="sparkV"></canvas>
+          </div>
+          <div class="stat">
+            <div class="label">Current</div>
+            <div class="value" id="vI">—</div><canvas class="spark" id="sparkI"></canvas>
+          </div>
+          <div class="stat">
+            <div class="label">Active Power</div>
+            <div class="value" id="vP">—</div><canvas class="spark" id="sparkP"></canvas>
+          </div>
+          <div class="stat">
+            <div class="label">Frequency</div>
+            <div class="value" id="vF">—</div><canvas class="spark" id="sparkF"></canvas>
+          </div>
+          <div class="stat">
+            <div class="label">Power Factor</div>
+            <div class="value" id="vPF">—</div><canvas class="spark" id="sparkPF"></canvas>
+          </div>
+          <div class="stat">
+            <div class="label">RSSI / SNR</div>
+            <div class="value" id="vLink">—</div><canvas class="spark" id="sparkRSSI"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title-row">
+          <h2>Packets</h2><span class="muted">Most recent first</span>
+        </div>
+        <div id="tableWrap">
+          <div class="empty">Upload or paste your JSON to populate this table.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="title-row">
+          <h2>How this decoder works</h2>
+        </div>
+        <div class="muted">
+          This page parses the raw payload emitted by your Heltec Vision Master E213 + Power Meter Click. The payload
+          is provided as <b>base64</b> encoded data in the JSON structure. We decode the fields using the following layout:<br><br>
+          <code>[u16 status] [u16 voltage] [u16 frequency] [i16 powerFactor] [u32 current] [u32 activePower] [u32 reactive] [u32 apparent]</code>
+          (big‑endian, no delimiters). Scaling: V×0.01, A×0.001, W×0.001, PF = i16/32767, Hz×0.01.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">2025 tinyLab | Heltec Vision Master E213 + Power Meter Click</footer>
+
+  <script>
+    const state = { packets: [], series: { ts: [], V: [], I: [], P: [], F: [], PF: [], RSSI: [] } };
+    const cfg = { scales: { V: 0.01, F: 0.01, I: 0.001, P: 0.001, PF_DEN: 32767 }, expectDelimiter: 0xAA, endian: 'be' };
+
+    // ————— Utilities —————
+    const $ = s => document.querySelector(s);
+    const fmt = (n, unit) => (Number.isFinite(n) ? `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}` : '—');
+    const toHex = (bytes) => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    function parseISO(s) { try { return new Date(s); } catch { return null; } }
+    function bestLink(rxInfo) {
+      if (!Array.isArray(rxInfo) || !rxInfo.length) return { rssi: null, snr: null };
+      // choose the entry with the highest SNR; tie-break by highest RSSI
+      return rxInfo.reduce((a, b) => {
+        if (a == null) return b; if (b.loRaSNR > a.loRaSNR) return b; if (b.loRaSNR === a.loRaSNR && b.rssi > a.rssi) return b; return a;
+      });
+    }
+    function b64ToBytes(b64) {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+    function hexToBytes(hex) {
+      const clean = hex.replace(/\s|0x/gi, '').toLowerCase();
+      if (clean.length % 2 !== 0) throw new Error('Hex length must be even');
+      const out = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
+      return out;
+    }
+    function beRead(bytes, offset, len) {
+      let v = 0; for (let i = 0; i < len; i++) { v = (v << 8) | bytes[offset + i]; } return v >>> 0; // unsigned
+    }
+    function beReadI16(bytes, offset) {
+      const v = (bytes[offset] << 8) | bytes[offset + 1];
+      return (v & 0x8000) ? v - 0x10000 : v; // signed
+    }
+
+    // ————— Decoder for the new frame format (no AA delimiters, no thermistor) —————
+    function decodeAAdelimited(bytes) {
+      let i = 0;
+      function need(n) { if (i + n > bytes.length) throw new Error('Payload too short'); }
+
+      // New format: no delimiters, no thermistor
+      // [u16 status]
+      need(2); const status = beRead(bytes, i, 2); i += 2;
+      // [u16 voltage]
+      need(2); const rawV = beRead(bytes, i, 2); i += 2;
+      // [u16 frequency]
+      need(2); const rawF = beRead(bytes, i, 2); i += 2;
+      // [i16 powerFactor]
+      need(2); const rawPF = beReadI16(bytes, i); i += 2;
+      // [u32 current]
+      need(4); const rawI = beRead(bytes, i, 4); i += 4;
+      // [u32 activePower]
+      need(4); const rawP = beRead(bytes, i, 4); i += 4;
+      // [u32 reactive]
+      need(4); const rawQ = beRead(bytes, i, 4); i += 4;
+      // [u32 apparent]
+      need(4); const rawS = beRead(bytes, i, 4); i += 4;
+
+      const V = rawV * cfg.scales.V;
+      const F = rawF * cfg.scales.F;
+      const I = rawI * cfg.scales.I;
+      const P = rawP * cfg.scales.P;
+      const PF = Math.max(0, Math.min(1, rawPF / cfg.scales.PF_DEN));
+      const Q = rawQ * cfg.scales.P;
+      const S = rawS * cfg.scales.P;
+      return { status, V, F, I, P, PF, Q, S, raw: { rawV, rawF, rawI, rawP, rawPF, rawQ, rawS } };
+    }
+
+    // ————— Packet adapter: supports new JSON format only —————
+    function adaptPackets(json) {
+      const out = [];
+      const arr = Array.isArray(json) ? json : (json.result || json.events || []);
+      for (const item of arr) {
+        try {
+          let bytes = null, src = '';
+          let ts = null, deviceName = '—', devEUI = '—', fPort = null, rx = [];
+          
+          // Only accept new JSON structure: item.data.data
+          if (!bytes && item?.data?.data) {
+            bytes = b64ToBytes(item.data.data);
+            src = 'base64';
+          }
+          if (!bytes) continue; // skip if no payload in new format
+
+          // Extract metadata from new structure only
+          fPort = item?.data?.fPort ?? null;
+          deviceName = item?.data?.deviceName || deviceName;
+          devEUI = item?.data?.devEUI || devEUI;
+          rx = item?.data?.rxInfo || [];
+          const best = bestLink(rx) || {};
+          const rssi = Number.isFinite(best.rssi) ? best.rssi : null;
+          const snr = Number.isFinite(best.loRaSNR) ? best.loRaSNR : null;
+          
+          // Handle timestamp from new structure only
+          ts = item.timestamp || item?.data?.rxInfo?.[0]?.time || item?.data?.timestamp || null;
+          if (typeof ts === 'number') ts = new Date(ts * 1000).toISOString();
+
+          const decoded = decodeAAdelimited(bytes);
+          out.push({ ts, deviceName, devEUI, fPort, rssi, snr, src, bytesHex: toHex(bytes), ...decoded });
+        } catch (e) {
+          console.warn('Skip packet (decode error):', e, item);
+        }
+      }
+      // sort newest first by ts if available
+      out.sort((a, b) => new Date(b.ts || 0) - new Date(a.ts || 0));
+      return out;
+    }
+
+    // ————— UI rendering —————
+    function renderTable() {
+      const rows = state.packets.map(p => `
+      <tr>
+        <td>${p.ts ? new Date(p.ts).toLocaleString() : '—'}</td>
+        <td>${p.deviceName || '—'}</td>
+        <td>${fmt(p.V, 'V')}</td>
+        <td>${fmt(p.I, 'A')}</td>
+        <td>${fmt(p.P, 'W')}</td>
+        <td>${fmt(p.F, 'Hz')}</td>
+        <td>${(p.PF ?? '—').toFixed ? p.PF.toFixed(2) : '—'}</td>
+        <td>${p.rssi ?? '—'}</td>
+        <td>${p.snr ?? '—'}</td>
+        <td style="font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:12px">${p.bytesHex}</td>
+      </tr>`).join('');
+
+      // Mobile card layout
+      const mobileCards = state.packets.map(p => `
+      <div class="mobile-card">
+        <div class="card-row"><span class="card-label">Time:</span><span class="card-value">${p.ts ? new Date(p.ts).toLocaleString() : '—'}</span></div>
+        <div class="card-row"><span class="card-label">Device:</span><span class="card-value">${p.deviceName || '—'}</span></div>
+        <div class="card-row"><span class="card-label">Voltage:</span><span class="card-value">${fmt(p.V, 'V')}</span></div>
+        <div class="card-row"><span class="card-label">Current:</span><span class="card-value">${fmt(p.I, 'A')}</span></div>
+        <div class="card-row"><span class="card-label">Power:</span><span class="card-value">${fmt(p.P, 'W')}</span></div>
+        <div class="card-row"><span class="card-label">Frequency:</span><span class="card-value">${fmt(p.F, 'Hz')}</span></div>
+        <div class="card-row"><span class="card-label">Power Factor:</span><span class="card-value">${(p.PF ?? '—').toFixed ? p.PF.toFixed(2) : '—'}</span></div>
+        <div class="card-row"><span class="card-label">Link Quality:</span><span class="card-value">${p.rssi ?? '—'} dBm / ${p.snr ?? '—'} dB</span></div>
+      </div>`).join('');
+
+      const html = `
+      <div class="row muted" style="margin-bottom:8px"><span class="pill">${state.packets.length} packet(s)</span></div>
+      <div style="overflow:auto">
+        <table class="list">
+          <thead><tr>
+            <th>Time</th><th>Device</th><th>V</th><th>I</th><th>P</th><th>Freq</th><th>PF</th><th>RSSI</th><th>SNR</th><th>Payload (hex)</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="mobile-cards">
+        ${mobileCards}
+      </div>`;
+
+      $('#tableWrap').innerHTML = rows ? html : '<div class="empty">No packets decoded yet.</div>';
+    }
+
+    function updateKPI() {
+      const latest = state.packets[0];
+      if (!latest) { $('#status').textContent = 'Waiting for data…'; return; }
+      $('#status').textContent = 'Updated';
+      $('#deviceName').textContent = latest.deviceName || '—';
+      $('#devEUI').textContent = latest.devEUI || '—';
+      $('#lastUpdate').textContent = latest.ts ? new Date(latest.ts).toLocaleString() : '—';
+
+      $('#vV').textContent = fmt(latest.V, 'V');
+      $('#vI').textContent = fmt(latest.I, 'A');
+      $('#vP').textContent = fmt(latest.P, 'W');
+      $('#vF').textContent = fmt(latest.F, 'Hz');
+      $('#vPF').textContent = Number.isFinite(latest.PF) ? latest.PF.toFixed(2) : '—';
+      $('#vLink').textContent = (latest.rssi ?? '—') + ' dBm · ' + (latest.snr ?? '—') + ' dB';
+    }
+
+    // Lightweight sparkline without external libs
+    function drawSpark(canvas, values) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.clientWidth, H = canvas.clientHeight; canvas.width = W; canvas.height = H;
+      ctx.clearRect(0, 0, W, H);
+      if (!values || values.length < 2) return;
+      const vmin = Math.min(...values), vmax = Math.max(...values);
+      const pad = 2, span = Math.max(1e-6, vmax - vmin);
+      ctx.lineWidth = 1.6; ctx.globalAlpha = .9;
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = pad + (W - 2 * pad) * (i / (values.length - 1));
+        const y = H - pad - (H - 2 * pad) * ((v - vmin) / span);
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent');
+      ctx.stroke();
+    }
+
+    function updateSparks() {
+      drawSpark($('#sparkV'), state.series.V);
+      drawSpark($('#sparkI'), state.series.I);
+      drawSpark($('#sparkP'), state.series.P);
+      drawSpark($('#sparkF'), state.series.F);
+      drawSpark($('#sparkPF'), state.series.PF);
+      drawSpark($('#sparkRSSI'), state.series.RSSI);
+    }
+
+    function rebuildSeries() {
+      // reverse chronological → chronological for charts
+      const arr = [...state.packets].reverse();
+      state.series.ts = arr.map(p => new Date(p.ts || 0));
+      state.series.V = arr.map(p => p.V);
+      state.series.I = arr.map(p => p.I);
+      state.series.P = arr.map(p => p.P);
+      state.series.F = arr.map(p => p.F);
+      state.series.PF = arr.map(p => p.PF);
+      state.series.RSSI = arr.map(p => p.rssi);
+    }
+
+    function ingest(json) {
+      state.packets = adaptPackets(json);
+      rebuildSeries();
+      renderTable();
+      updateKPI();
+      updateSparks();
+    }
+
+    // ————— Wire up controls + Auto-poll —————
+    const btnTheme = $('#btnTheme');
+    if (btnTheme) {
+      btnTheme.onclick = () => {
+        const cur = document.documentElement.getAttribute('data-theme');
+        document.documentElement.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light');
+      };
+    }
+    // default to dark
+    document.documentElement.setAttribute('data-theme', 'dark');
+
+    // Auto polling of data.json every 5 seconds (no manual upload)
+    const auto = { url: 'data.json', intervalMs: 5000 };
+    const autoPill = $('#autoPill');
+
+    async function pollOnce() {
+      try {
+        const cacheBust = (auto.url.includes('?') ? '&' : '?') + '_=' + Date.now();
+        const res = await fetch(auto.url + cacheBust, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        ingest(data);
+        const now = new Date();
+        const lf = $('#lastFetch'); if (lf) lf.textContent = now.toLocaleTimeString();
+        if (autoPill) { autoPill.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> Auto refresh: 5s'; autoPill.classList.remove('bad'); }
+        $('#status').textContent = 'Updated';
+      } catch (e) {
+        console.warn('Auto-poll error:', e);
+        $('#status').textContent = 'Fetch error';
+        if (autoPill) { autoPill.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Auto: error'; autoPill.classList.add('bad'); }
+        // do not stop; keep polling to recover
+      }
+    }
+    setInterval(pollOnce, auto.intervalMs);
+    pollOnce();
+
+    // Demo data (based directly on your sample packet)
+    const DEMO = [
+      {
+        "fPort": 2,
+        "logObject": {
+          "payload": {
+            "adr": true, "applicationID": "1", "applicationName": "app1",
+            "data": "wACqBe2qAACqAPWqf/+qAAAAL6oAAABNqgAAAACqAAAAR6o=", "data_encode": "base64",
+            "devEUI": "70b3d57ed00653c8", "deviceName": "HeltecVME213_test1", "fCnt": 20,
+            "fPort": 2, "object": {}, "rxInfo": [
+              { "gatewayID": "ac1f09fffe1e7e09", "loRaSNR": 11.8, "location": { "altitude": 226, "latitude": 40.42755, "longitude": -86.91144 }, "rssi": -48, "time": "2025-10-16T20:07:12.533842Z" },
+              { "gatewayID": "ac1f09fffe1e7e09", "loRaSNR": 8.5, "location": { "altitude": 226, "latitude": 40.42755, "longitude": -86.91144 }, "rssi": -89, "time": "2025-10-16T20:07:12.533841Z" }
+            ], "timestamp": 1760645232, "txInfo": { "dr": 3, "frequency": 902700000 }
+          }, "type": "Uplink"
+        },
+        "payload": "c000aa05edaa0000aa00f5aa7fffaa0000002faa0000004daa00000000aa00000047aa",
+        "timestamp": 1760645233, "type": "UPLINK", "renderKey": "17606452331"
+      }
+    ];
+
+    const btnDemo = $('#btnDemo'); if (btnDemo) btnDemo.onclick = () => ingest(DEMO);
+
+    // Optional: auto-load demo on first visit for a quick glance
+    // ingest(DEMO);
+  </script>
+</body>
+
+</html>

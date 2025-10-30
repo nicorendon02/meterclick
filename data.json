@@ -1,0 +1,200 @@
+[
+    {
+        "fPort": 2,
+        "logObject": {
+            "payload": {
+                "adr": true,
+                "applicationID": "1",
+                "applicationName": "app1",
+                "data": "wACqBe2qAACqAPWqf\/+qAAAAL6oAAABNqgAAAACqAAAAR6o=",
+                "data_encode": "base64",
+                "devEUI": "70b3d57ed00653c8",
+                "deviceName": "HeltecVME213_test1",
+                "fCnt": 20,
+                "fPort": 2,
+                "object": [],
+                "rxInfo": [
+                    {
+                        "gatewayID": "ac1f09fffe1e7e09",
+                        "loRaSNR": 11.8,
+                        "location": {
+                            "altitude": 226,
+                            "latitude": 40.42755,
+                            "longitude": -86.91144
+                        },
+                        "rssi": -48,
+                        "time": "2025-10-16T20:07:12.533842Z"
+                    },
+                    {
+                        "gatewayID": "ac1f09fffe1e7e09",
+                        "loRaSNR": 8.5,
+                        "location": {
+                            "altitude": 226,
+                            "latitude": 40.42755,
+                            "longitude": -86.91144
+                        },
+                        "rssi": -89,
+                        "time": "2025-10-16T20:07:12.533841Z"
+                    }
+                ],
+                "timestamp": 1760645232,
+                "txInfo": {
+                    "dr": 3,
+                    "frequency": 902700000
+                }
+            },
+            "type": "Uplink"
+        },
+        "payload": "c000aa05edaa0000aa00f5aa7fffaa0000002faa0000004daa00000000aa00000047aa",
+        "timestamp": 1760645233,
+        "type": "UPLINK",
+        "renderKey": "17606452331"
+    },
+    {
+        "timestamp": "2025-10-17 10:57:29",
+        "data": {
+            "applicationID": "1",
+            "applicationName": "app1",
+            "deviceName": "HeltecVME213_test1",
+            "devEUI": "70b3d57ed00653c8",
+            "timestamp": 1760713048,
+            "devAddr": "021f5525"
+        }
+    },
+    {
+        "timestamp": "2025-10-17 10:58:02",
+        "data": {
+            "applicationID": "1",
+            "applicationName": "app1",
+            "devEUI": "70b3d57ed00653c8",
+            "deviceName": "HeltecVME213_test1",
+            "timestamp": 1760713082,
+            "fCnt": 1,
+            "fPort": 2,
+            "data": "wACqBseqAACqAOaqf\/+qAAAARqoAAACCqgAAAACqAAAAeao=",
+            "data_encode": "base64",
+            "object": [],
+            "adr": true,
+            "rxInfo": [
+                {
+                    "gatewayID": "ac1f09fffe1e7e09",
+                    "loRaSNR": 14,
+                    "rssi": -51,
+                    "location": {
+                        "latitude": 40.42754,
+                        "longitude": -86.91131,
+                        "altitude": 212
+                    },
+                    "time": "2025-10-17T14:58:02.514889Z"
+                }
+            ],
+            "txInfo": {
+                "frequency": 902500000,
+                "dr": 3
+            }
+        }
+    },
+    {
+        "timestamp": "2025-10-17 10:58:32",
+        "data": {
+            "applicationID": "1",
+            "applicationName": "app1",
+            "devEUI": "70b3d57ed00653c8",
+            "deviceName": "HeltecVME213_test1",
+            "timestamp": 1760713112,
+            "fCnt": 2,
+            "fPort": 2,
+            "data": "wACqBsaqAACqAOiqf\/+qAAAAPKoAAABuqgAAAACqAAAAaKo=",
+            "data_encode": "base64",
+            "object": {
+                "humidity": 85
+            },
+            "adr": true,
+            "rxInfo": [
+                {
+                    "gatewayID": "ac1f09fffe1e7e09",
+                    "loRaSNR": 9.5,
+                    "rssi": -80,
+                    "location": {
+                        "latitude": 40.42761,
+                        "longitude": -86.91121,
+                        "altitude": 193
+                    },
+                    "time": "2025-10-17T14:58:32.528535Z"
+                },
+                {
+                    "gatewayID": "ac1f09fffe1e7e09",
+                    "loRaSNR": 13.5,
+                    "rssi": -46,
+                    "location": {
+                        "latitude": 40.42761,
+                        "longitude": -86.91121,
+                        "altitude": 193
+                    },
+                    "time": "2025-10-17T14:58:32.528533Z"
+                },
+                {
+                    "gatewayID": "ac1f09fffe1e7e09",
+                    "loRaSNR": 7.2,
+                    "rssi": -90,
+                    "location": {
+                        "latitude": 40.42761,
+                        "longitude": -86.91121,
+                        "altitude": 193
+                    },
+                    "time": "2025-10-17T14:58:32.526824Z"
+                }
+            ],
+            "txInfo": {
+                "frequency": 903300000,
+                "dr": 3
+            }
+        }
+    },
+    {
+        "timestamp": "2025-10-17 10:59:02",
+        "data": {
+            "applicationID": "1",
+            "applicationName": "app1",
+            "devEUI": "70b3d57ed00653c8",
+            "deviceName": "HeltecVME213_test1",
+            "timestamp": 1760713142,
+            "fCnt": 3,
+            "fPort": 2,
+            "data": "wACqBsaqAACqAOmqf\/+qAAAANaoAAABlqgAAAACqAAAAW6o=",
+            "data_encode": "base64",
+            "object": {
+                "illuminance": 43520
+            },
+            "adr": true,
+            "rxInfo": [
+                {
+                    "gatewayID": "ac1f09fffe1e7e09",
+                    "loRaSNR": 8,
+                    "rssi": -86,
+                    "location": {
+                        "latitude": 40.42762,
+                        "longitude": -86.91125,
+                        "altitude": 196
+                    },
+                    "time": "2025-10-17T14:59:02.316738Z"
+                },
+                {
+                    "gatewayID": "ac1f09fffe1e7e09",
+                    "loRaSNR": 13.8,
+                    "rssi": -51,
+                    "location": {
+                        "latitude": 40.42762,
+                        "longitude": -86.91125,
+                        "altitude": 196
+                    },
+                    "time": "2025-10-17T14:59:02.319165Z"
+                }
+            ],
+            "txInfo": {
+                "frequency": 903100000,
+                "dr": 3
+            }
+        }
+    }
+]

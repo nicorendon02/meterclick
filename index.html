@@ -655,8 +655,12 @@
         <div class="muted">
           This page parses the raw payload emitted by your Heltec Vision Master E213 + Power Meter Click. The payload
           is provided as <b>base64</b> encoded data in the JSON structure. We decode the fields using the following layout:<br><br>
-          <code>[u16 status] [u16 voltage] [u16 frequency] [i16 powerFactor] [u32 current] [u32 activePower] [u32 reactive] [u32 apparent]</code>
-          (big‑endian, no delimiters). Scaling: V×0.01, A×0.001, W×0.001, PF = i16/32767, Hz×0.01.
+          <strong>New format (22 bytes, no delimiters):</strong><br>
+          <code>[u16 status] [u16 voltage] [u16 frequency] [u32 current] [u32 activePower] [u32 reactive] [u32 apparent]</code><br>
+          <small>Note: u32 values use Arduino's byte order [bits 8-15, 16-23, 24-31, 0-7]</small><br><br>
+          <strong>Old format (with 0xAA delimiters):</strong><br>
+          <code>[u16 status] 0xAA [u16 voltage] 0xAA [u16 frequency] 0xAA [u16 thermistor] 0xAA [i16 powerFactor] 0xAA [u32 current] 0xAA [u32 activePower] 0xAA [u32 reactive] 0xAA [u32 apparent]</code><br><br>
+          <strong>Scaling factors:</strong> V÷100, Hz÷100, A÷1,000,000, W÷1,000,000, PF÷32768, VAR÷1,000, VA÷1,000,000
         </div>
       </div>
     </section>
@@ -666,7 +670,7 @@
 
   <script>
     const state = { packets: [], series: { ts: [], V: [], I: [], P: [], F: [], PF: [], RSSI: [] } };
-    const cfg = { scales: { V: 0.01, F: 0.01, I: 0.001, P: 0.001, PF_DEN: 32767 }, expectDelimiter: 0xAA, endian: 'be' };
+    const cfg = { scales: { V: 0.01, F: 0.01, I: 0.000001, P: 0.000001, PF_DEN: 32768, Q: 0.001, S: 0.000001 }, expectDelimiter: 0xAA, endian: 'be' };
 
     // ————— Utilities —————
     const $ = s => document.querySelector(s);
@@ -701,37 +705,85 @@
       return (v & 0x8000) ? v - 0x10000 : v; // signed
     }
 
-    // ————— Decoder for the new frame format (no AA delimiters, no thermistor) —————
+    // ————— Decoder matching Arduino byte order (handles incorrect u32 byte order from Arduino) —————
     function decodeAAdelimited(bytes) {
       let i = 0;
       function need(n) { if (i + n > bytes.length) throw new Error('Payload too short'); }
+      
+      // Helper to read u32 in Arduino's incorrect byte order: [byte>>8, byte>>16, byte>>24, byte&0xFF]
+      // This means: [bits 8-15, bits 16-23, bits 24-31, bits 0-7]
+      function readArduinoU32(offset) {
+        const b0 = bytes[offset];     // bits 8-15
+        const b1 = bytes[offset + 1]; // bits 16-23
+        const b2 = bytes[offset + 2]; // bits 24-31 (MSB)
+        const b3 = bytes[offset + 3]; // bits 0-7 (LSB)
+        // Reconstruct: MSB is b2, then b1, then b0, then b3
+        return ((b2 << 24) | (b1 << 16) | (b0 << 8) | b3) >>> 0;
+      }
+      
+      // Auto-detect format: check if byte at position 2 is 0xAA (delimiter)
+      const hasDelimiters = bytes.length > 2 && bytes[2] === 0xAA;
+      
+      if (hasDelimiters) {
+        // OLD format: with AA delimiters and thermistor
+        function expectDelim() { need(1); if (bytes[i] !== 0xAA) throw new Error(`Missing delimiter 0xAA at ${i}`); i++; }
+        
+        // [u16 status]
+        need(2); const status = beRead(bytes, i, 2); i += 2; expectDelim();
+        // [u16 voltage]
+        need(2); const rawV = beRead(bytes, i, 2); i += 2; expectDelim();
+        // [u16 frequency]
+        need(2); const rawF = beRead(bytes, i, 2); i += 2; expectDelim();
+        // [u16 thermistor]
+        need(2); const rawT = beRead(bytes, i, 2); i += 2; expectDelim();
+        // [i16 powerFactor]
+        need(2); const rawPF = beReadI16(bytes, i); i += 2; expectDelim();
+        // [u32 current] - Arduino byte order
+        need(4); const rawI = readArduinoU32(i); i += 4; expectDelim();
+        // [u32 activePower] - Arduino byte order
+        need(4); const rawP = readArduinoU32(i); i += 4; expectDelim();
+        // [u32 reactive] - Arduino byte order
+        need(4); const rawQ = readArduinoU32(i); i += 4; expectDelim();
+        // [u32 apparent] - Arduino byte order
+        need(4); const rawS = readArduinoU32(i); i += 4;
 
-      // New format: no delimiters, no thermistor
-      // [u16 status]
-      need(2); const status = beRead(bytes, i, 2); i += 2;
-      // [u16 voltage]
-      need(2); const rawV = beRead(bytes, i, 2); i += 2;
-      // [u16 frequency]
-      need(2); const rawF = beRead(bytes, i, 2); i += 2;
-      // [i16 powerFactor]
-      need(2); const rawPF = beReadI16(bytes, i); i += 2;
-      // [u32 current]
-      need(4); const rawI = beRead(bytes, i, 4); i += 4;
-      // [u32 activePower]
-      need(4); const rawP = beRead(bytes, i, 4); i += 4;
-      // [u32 reactive]
-      need(4); const rawQ = beRead(bytes, i, 4); i += 4;
-      // [u32 apparent]
-      need(4); const rawS = beRead(bytes, i, 4); i += 4;
+        const V = rawV * cfg.scales.V;
+        const F = rawF * cfg.scales.F;
+        const I = rawI * cfg.scales.I;
+        const P = rawP * cfg.scales.P;
+        const PF = Math.max(0, Math.min(1, rawPF / cfg.scales.PF_DEN));
+        const Q = rawQ * cfg.scales.Q;
+        const S = rawS * cfg.scales.S;
+        return { status, V, F, I, P, PF, Q, S, raw: { rawV, rawF, rawI, rawP, rawPF, rawQ, rawS, rawT } };
+      } else {
+        // NEW format: no delimiters, no power factor, no thermistor
+        // Format: [u16 status] [u16 voltage] [u16 frequency] [u32 current] [u32 active] [u32 reactive] [u32 apparent]
+        // Total: 22 bytes
+        
+        // [u16 status]
+        need(2); const status = beRead(bytes, i, 2); i += 2;
+        // [u16 voltage]
+        need(2); const rawV = beRead(bytes, i, 2); i += 2;
+        // [u16 frequency]
+        need(2); const rawF = beRead(bytes, i, 2); i += 2;
+        // [u32 current] - Arduino incorrect byte order
+        need(4); const rawI = readArduinoU32(i); i += 4;
+        // [u32 activePower] - Arduino incorrect byte order
+        need(4); const rawP = readArduinoU32(i); i += 4;
+        // [u32 reactive] - Arduino incorrect byte order
+        need(4); const rawQ = readArduinoU32(i); i += 4;
+        // [u32 apparent] - Arduino incorrect byte order
+        need(4); const rawS = readArduinoU32(i); i += 4;
 
-      const V = rawV * cfg.scales.V;
-      const F = rawF * cfg.scales.F;
-      const I = rawI * cfg.scales.I;
-      const P = rawP * cfg.scales.P;
-      const PF = Math.max(0, Math.min(1, rawPF / cfg.scales.PF_DEN));
-      const Q = rawQ * cfg.scales.P;
-      const S = rawS * cfg.scales.P;
-      return { status, V, F, I, P, PF, Q, S, raw: { rawV, rawF, rawI, rawP, rawPF, rawQ, rawS } };
+        const V = rawV * cfg.scales.V;
+        const F = rawF * cfg.scales.F;
+        const I = rawI * cfg.scales.I;
+        const P = rawP * cfg.scales.P;
+        const PF = 0; // Not transmitted in new format
+        const Q = rawQ * cfg.scales.Q;
+        const S = rawS * cfg.scales.S;
+        return { status, V, F, I, P, PF, Q, S, raw: { rawV, rawF, rawI, rawP, rawPF: 0, rawQ, rawS } };
+      }
     }
 
     // ————— Packet adapter: supports new JSON format only —————
